@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//ibatis.apache.org//DTD Mapper 3.0//EN"      
+ "http://ibatis.apache.org/dtd/ibatis-3-mapper.dtd">
+<!-- namespace:命名空间，用来区分同名的sql。 id:在同一个文件里面唯一。 parameterType:参数类型。 resultType:返回的结果类型。 
+	#{ename}: ename是Emp的属性(mybatis 会利用反射机制读取emp对象的属性值)。 注意： 如果使用Mapper映射器，namespace 
+	必须等Mapper接口的完整的名称。 -->
+<!-- <select id="getMtypeList" resultType="java.util.HashMap"> -->
+<!-- select code,`name` from jk_control_measure -->
+<!-- </select> -->
+<mapper namespace="com.huawei.it.dao.DemoDao">
+	<insert id="insertCFGParameterInfos" parameterType="java.util.List">
+		begin
+		<foreach collection="list" item="info">
+			insert into cr_parameterconfig
+			(labelid,productcfgid,parametercode,sortno,inputtype,ismultivalue,manualvalue,valuechsdesc,valueengdesc,parachsdesc,paraengdesc)
+			values
+			(#{info.labelID,jdbcType=VARCHAR},#{info.productCfgID,jdbcType=VARCHAR},
+			#{info.sortNO,jdbcType=VARCHAR},#{info.inputType,jdbcType=VARCHAR},
+			#{info.isMultiValue,jdbcType=VARCHAR},#{info.manualValue,jdbcType=VARCHAR},
+			#{info.valueChsDesc,jdbcType=VARCHAR},#{info.valueEngDesc,jdbcType=VARCHAR},
+			#{info.paraChsDesc,jdbcType=VARCHAR},#{info.paraEngDesc,jdbcType=VARCHAR}
+			);
+		</foreach>
+		exception when others then
+		rollback;
+		RAISE_APPLICATION_ERROR(-20000,'Data exception and may be a violation
+		of the only constraint');
+		end;
+	</insert>
+	<!-- statementType="CALLABLE"告诉mybatis我们将用存储过程的方式去执行他。如果不声明她，程序将会抛出异常。 -->
+	<!-- 参数定义，mode=IN的时候为输入参数，mode=OUT的时候为输出参数，jdbcType定义为数据库的类型。 -->
+	<!-- 当我们这样写的时候mybatis会帮我们自动回填result和execDate，当然也可以使用Map -->
+	<select id="count" parameterType="com.gsstudy.it.entity.ProcedurePojo"
+		statementType="CALLABLE">
+		{call
+		count_role(#{roleName,mode=IN,jdbcType=VARCHAR},#{result,mode=OUT,jdbcType=INTEGER},#{execDate,mode=OUT,jdbcType=DATE})}
+	</select>
+	<delete id="deleteCRSolutionInfoAttrs" parameterType="java.util.List">
+		begin
+		<foreach collection="list" item="item">
+			delete from CR_SOLUTIONEXTATTR
+			solutionid = #{item};
+		</foreach>
+		end;
+	</delete>
+	<insert id="insetCRSolutionTradeInfo" parameterType="java.util.List">
+		begin
+		<foreach collection="list" item="info">
+			insert into
+			cr_tradeinfo(labelid,commercefeecode,value,crgroupid)
+			values
+			(#{info.labelID,jdbcType=VARCHAR},#{info.commerceFeeCode,jdbcType=VARCHAR},#{info.crGroupID,jdbcType=VARCHAR},
+			#{info.crGroupID,jdbcType=VARCHAR}
+			);
+		</foreach>
+		exception
+		when others then RAISE_APPLICATION_ERROR(-20000,'Data
+		exception and may be
+		a violation of the only constraint');
+		end;
+	</insert>
+	<!-- 在使用mybatis 时我们sql是写在xml -->
+	<!-- 映射文件中，如果写的sql中有一些特殊的字符的话，在解析xml文件的时候会被转义，但我们不希望他被转义，所以我们要使用<![CDATA[ 
+		]]>来解决。 -->
+	<!-- <![CDATA[ ]]> -->
+	<!-- 是什么，这是XML语法。在CDATA内部的所有内容都会被解析器忽略。 -->
+	<!-- 如果文本包含了很多的"<"字符 <=和"&"字符——就象程序代码一样，那么最好把他们都放到CDATA部件中。 -->
+	<!-- 但是有个问题那就是 -->
+	<!-- <if test=""> -->
+	<!-- </if> -->
+	<!-- <where> -->
+	<!-- </where> -->
+	<!-- <choose> -->
+	<!-- </choose> -->
+	<!-- <trim> -->
+	<!-- </trim> -->
+	<!-- 等这些标签都不会被解析，所以我们只把有特殊字符的语句放在 <![CDATA[ ]]> -->
+	<!-- 尽量缩小 <![CDATA[ ]]>的范围。 -->
+	<select id="allUserInfo" parameterType="java.util.HashMap"
+		resultMap="userInfo1">  
+  		<![CDATA[  
+  		SELECT newsEdit,newsId, newstitle FROM shoppingGuide  WHERE 1=1  AND  newsday > #{startTime} AND newsday <= #{endTime}  
+  		]]>
+		<if test="etidName!=''">
+			AND newsEdit=#{etidN.ame}
+		</if>
+	</select>
+	<select id="copyBoq" parameterType="java.util.Map" statementType="CALLABLE">
+	<![CDATA[ 
+		CALL SCTES_BOQ_PKG.copyBoq(#{boqId,jdbcType=NUMERIC,mode=IN},#{copyType,jdbcType=NUMERIC,mode=IN},#{shareRemark,jdbcType=CLOB,mode=IN})
+	]]>
+	</select>
+	<select id="findParameterValue" resultType="hashmap">
+		select
+		<if test="qtyType==0">b.existingvalue as value,</if>
+		<if test="qtyType==1">b.manualvalue as value,</if>
+		<if test="qtyType==2">b.manualvalue as value,</if>
+		<if test="qtyType==3">b.manualvalue as value,</if>
+		<if test="qtyType==4">b.standardvalue as value,</if>
+		c.siteqty as siteQty
+		from
+		UNISCT.prj_productcfgmodel a inner join UNISCT.prj_parameterconfigb b
+		on a.configurationmodelid = b.configurationmodelid inner join(
+		select configurationmodelid,sum(qty) as siteqty from UNISCT.prj_projectcfg
+		where projectid=#{boqID,jdbcType=VARCHAR}
+		<if test="siteName!=null">and sitename=#{siteName,jebcType=VARCHAR}</if>
+		<if test="dimensionModelID !=null">and configurationmodelid=#{dimensionModelID,jdbcType=VARCHAR}</if>
+		group by configurationmodelid)c
+		on a.configurationmodelid = c.configurationmodelid inner join
+		UNISCT.prj_productcfgmodelbase bs on a.configurationmodelid = bs.configurationmodelid
+		where b.manualvalue is not null
+		<if test="moduleCodes!=null">and a.modulecode in
+		<foreach collection="moduleCodes" item="moduleCode" open="(" close=")">
+		#{moduleCode,jdbcType=VARCHAR}
+		</foreach>
+		</if>
+		<if test="productCodes!=null">
+			and a.productcode in 
+			<foreach collection="productCodes" item="productCode" open="(" close=")">
+				#{productCode,jdbcType=VARCHAR}
+			</foreach>
+		</if>
+		<if test="parameterCode!=null">
+		and b.parametercode=#{parameterCode,jdbcType=VARCHAR}
+		</if>
+		<if test="dimensionModelID!=null">
+		and bs.producttypeid
+		<![CDATA[
+		<>
+		]]>
+		#{DIMENSIONpRODUCTtYPEid,jdbcType=NUMERIC}>
+		</if>
+	</select>
+<!--
+ #{}表示一个展位符号，通过#{}可以实现preparedStatement向占位符中设置值，自动进行java类型和jdbc类型转换，#{}可以有效防止sql注入
+ #{}可以接受简单类型的值或pojo属性值。如果parameterType传输单个简单类型值，#{}括号中可以是value或其他名称
+ ${}表示拼接字符串，通过${}可以将parameterType传入的类容拼接在sql中且不进行jdbc类型转换，
+ ${}可以接受简单类型值或pojo属性值，如果parameterType传输单个简单类型值，${}括号中只能是value
+ -->
+	<delete id="batchDelete" parameterType="java.util.List">
+		begin
+		<foreach collection="list" item="boqID">
+			delete from prj_boqauthinfo t where  t.boqid = #{boqID,jdbcType=DECIMAL};
+		</foreach>
+		end;
+	</delete>
+	<insert id="insert" parameterType="java.util.List">
+		begin
+		<foreach collection="list" item="boqvo">
+			insert into prj_boqauthinfo(boqid,typeid,optvalue) values(
+				#{boqvo.boqID,jdbcType=DECIMAL},
+				#{boqvo.typeID,jdbcType=DECIMAL},
+				#{boqvo.optValue,jdbcType=DECIMAL}				
+			);
+		</foreach>
+		end;
+	</insert>
+	<select id="findLeftOperatorList" resultType="BoqInfoVO">
+		select b.* from (select rownum no,<trim suffixOverrides=",">a.operatorid as operatorId,a.operatorcode as operatorCode,
+			<choose>
+				<when test='_parameter.get("0")=="CN"'>
+					a.chsname as operatorChsName,
+				</when>
+				<otherwise>
+					a.engname as operatorChsName,
+				</otherwise>
+			</choose>
+		</trim> from d_operator a where a.countrycode=#{0} and available = 1
+			<if test='_parameter.get("3")!=null and _parameter.get("3")!=""'>
+				<choose>
+					<when test='_parameter.get("0")=="CN"'>
+						and upper(a.chsname) not like CONCAT(CONCAT('%',upper(#{3})),'%')
+					</when>
+					<otherwise>
+						upper(a.engname) not like CONCAT(CONCAT('%',upper(#{3})),'%')
+					</otherwise>
+				</choose>
+			</if>
+			and rownum <![CDATA[<=]]>#{2}
+		)b where no <![CDATA[>=]]>#{1}
+		order by 
+		<choose>
+			<when test='_parameter.get("0")=="CN"'>
+				b.operatorChsName
+			</when>
+			<otherwise>
+				b.operatorEngName
+			</otherwise>
+		</choose>	
+	</select>
+	<select id="findOperatorListByPage" resultType="BoqInfoVO">
+		select b.* from (
+			select rownum no,
+			<trim suffixOverrides=",">
+				a.operatorid as operatorId,
+				a.operatorcode as operatorCode,
+				<choose>
+					<when test='_parameter.get("3")=="CN"'>
+						a.chsname as operatorChsName,
+					</when>
+					<otherwise>
+						a.engname as operatorEngName,
+					</otherwise>
+				</choose>
+			</trim>
+			from d_operator a where a.countrycode=#{3} and a.available =1
+			<if test='_parameter.get("0")!=null and _parameter.get("0")!=""'>
+				<choose>
+					<when test='_parameter.get("3")=="CN"'>
+						and upper(a.chsname) like CONCAT(CONCAT('%',#{0}),'%')
+					</when>
+					<otherwise>
+						and upper(a.engname) like CONCAT(CONCAT('%',#{0}),'%')
+					</otherwise>
+				</choose>
+			</if>
+			and rownum <![CDATA[<=]]>#{2})b
+			where no <![CDATA[>=]]>#{1} order by 
+			<choose>
+				<when test='_parameter.get("3")=="CN"'>
+					b.operatorChsName
+				</when>
+				<otherwise>
+					b.operatorEngName
+				</otherwise>
+			</choose>
+		
+	</select>
+	
+	<select id="copyBoq" parameterType="java.util.Map" statementType="CALLABLE">
+		call PKG.copyBoq(
+		#{boqId,jdbcType=NUMERIC,mode=IN},
+		#{copyType,jdbcType=NUMERIC,mode=IN},
+		#{shareRemark,jdbcType=CLOB,mode=IN}
+		);
+	</select>
+	
+	
+	
+	
+</mapper>

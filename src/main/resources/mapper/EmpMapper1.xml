@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper PUBLIC "-//ibatis.apache.org//DTD Mapper 3.0//EN"      
+ "http://ibatis.apache.org/dtd/ibatis-3-mapper.dtd">
+<!-- namespace:命名空间，用来区分同名的sql。 id:在同一个文件里面唯一。 parameterType:参数类型。 resultType:返回的结果类型。 
+	#{ename}: ename是Emp的属性(mybatis 会利用反射机制读取emp对象的属性值)。 注意： 如果使用Mapper映射器，namespace 
+	必须等Mapper接口的完整的名称。 -->
+<!-- <select id="getMtypeList" resultType="java.util.HashMap"> -->
+<!-- select code,`name` from jk_control_measure -->
+<!-- </select> -->
+<mapper namespace="com.miaomiao.it.learning.dao.EmpDao1">
+	<select id="findAll" resultType="com.miaomiao.it.learning.entity.Emp">
+		SELECT * FROM emp
+	</select>
+	<select id="findByDept" parameterType="com.miaomiao.it.learning.entity.Condition" resultType="com.miaomiao.it.learning.entity.Emp">
+		select * from emp 
+		<if test="deptno != null">
+			where deptno=#{deptno}
+		</if>
+	</select>
+</mapper>
